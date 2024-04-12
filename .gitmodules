@@ -1,0 +1,3 @@
+[submodule "signal-server/spdlog"]
+	path = signal-server/spdlog
+	url = https://github.com/gabime/spdlog
