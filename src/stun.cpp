@@ -160,7 +160,7 @@ void Message::add_integrity(QByteArray integrity_key)
 void Message::add_fingerprint()
 {
     this->set_length(_length + FINGERPRINT_LENGTH);
-    auto fingerprint = int_to_bytes<uint32_t>(calc_crc32(this->to_bytes()) ^ stun::FINGERPRINT_XOR);
+    auto fingerprint = int_to_bytes<uint32_t>(calc_crc32(this->to_bytes()) ^ FINGERPRINT_XOR);
     this->push_attribute(Attribute::FINGERPRINT, fingerprint);
 }
 

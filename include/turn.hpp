@@ -17,10 +17,11 @@ public:
 
 public:
     std::pair<QHostAddress, uint16_t> allocate_address();
-    void create_permission(std::string, uint16_t);
-    void refresh(uint32_t);
+    void create_permission(const std::string, const uint16_t);
+    void refresh(const uint32_t);
 
-    void send_data(QByteArray, std::string, uint16_t);
+    stun::Message send_to_server(const stun::Message, bool check_error = true);
+    void send_data(const QByteArray, const std::string, const uint16_t);
     QByteArray recv_data();
 
 private:
@@ -30,6 +31,12 @@ private:
     std::pair<QHostAddress, uint16_t> _server_addr;
     QByteArray _integrity_key;
     QByteArray _nonce;
+};
+
+struct ServerError : public std::runtime_error {
+public:
+    ServerError(const std::string&);
+    virtual ~ServerError() noexcept = default;
 };
 
 };

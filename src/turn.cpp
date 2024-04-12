@@ -2,6 +2,7 @@
 #include <turn.hpp>
 
 #include <QtCore/QCryptographicHash>
+#include <QtCore/QtLogging>
 
 #include <sstream>
 
@@ -51,6 +52,7 @@ QByteArray xor_address(std::string ip_addr, uint16_t port)
     size_t i {};
     while (std::getline(ss, octet, '.')) {
         xor_peer_addr.push_back(std::atoi(octet.c_str()) ^ cookie_raw[i]);
+        i++;
     }
 
     return xor_peer_addr;
@@ -82,16 +84,10 @@ std::pair<QHostAddress, uint16_t> Client::allocate_address()
     get_nonce_msg.add_fingerprint();
 
     // send request to get NONCE and wait response
-    _socket->writeDatagram(get_nonce_msg.to_bytes(), _server_addr.first, _server_addr.second);
-    while (!_socket->hasPendingDatagrams()) { }
-
-    QByteArray response_raw {};
-    response_raw.fill('\x00', BUFFER_SIZE);
-    _socket->readDatagram(response_raw.data(), BUFFER_SIZE);
+    auto nonce_response = this->send_to_server(get_nonce_msg, false);
 
     // get NONCE from response
-    stun::Message response { response_raw };
-    auto nonce_attribute = response.find_attribute(stun::Attribute::NONCE);
+    auto nonce_attribute = nonce_response.find_attribute(stun::Attribute::NONCE);
     _nonce.resize(16);
     std::copy(nonce_attribute.begin() + 4, nonce_attribute.end(), _nonce.begin());
 
@@ -105,17 +101,10 @@ std::pair<QHostAddress, uint16_t> Client::allocate_address()
     allocate_msg.add_fingerprint();
 
     // send request to get NONCE and wait response
-    _socket->writeDatagram(allocate_msg.to_bytes(), _server_addr.first, _server_addr.second);
-    while (!_socket->hasPendingDatagrams()) { }
-
-    response_raw.clear();
-    response_raw.fill('\x00', BUFFER_SIZE);
-    _socket->readDatagram(response_raw.data(), BUFFER_SIZE);
+    auto allocate_response = this->send_to_server(allocate_msg);
 
     // get XOR_RELAYED_ADDRESS from response
-    stun::Message allocate_response { response_raw };
     auto relayed_addr_attr = allocate_response.find_attribute(stun::Attribute::XOR_RELAYED_ADDRESS);
-
     QByteArray xor_relayed_address {};
     xor_relayed_address.resize(8);
     std::copy(relayed_addr_attr.begin() + 4, relayed_addr_attr.end(), xor_relayed_address.begin());
@@ -123,7 +112,7 @@ std::pair<QHostAddress, uint16_t> Client::allocate_address()
     return unpack_xor_address(xor_relayed_address);
 }
 
-void Client::create_permission(std::string ip_addr, uint16_t port)
+void Client::create_permission(const std::string ip_addr, const uint16_t port)
 {
     auto xor_peer_addr = xor_address(ip_addr, port);
     stun::Message msg { stun::MsgClass::REQUEST, stun::MsgMethod::CREATE_PERMISSION };
@@ -133,21 +122,10 @@ void Client::create_permission(std::string ip_addr, uint16_t port)
     msg.add_attribute(stun::Attribute::REALM, QByteArray());
     msg.add_integrity(_integrity_key);
     msg.add_fingerprint();
-
-    _socket->writeDatagram(msg.to_bytes(), _server_addr.first, _server_addr.second);
-    while (!_socket->hasPendingDatagrams()) { }
-
-    QByteArray response_raw {};
-    response_raw.fill('\x00', BUFFER_SIZE);
-    _socket->readDatagram(response_raw.data(), BUFFER_SIZE);
-
-    stun::Message create_permissions_response { response_raw };
-    if (create_permissions_response.get_class() == stun::MsgClass::ERROR) {
-        throw std::runtime_error { "Can't create permission on TURN server" };
-    }
+    this->send_to_server(msg);
 }
 
-void Client::refresh(uint32_t lifetime)
+void Client::refresh(const uint32_t lifetime)
 {
     stun::Message msg { stun::MsgClass::REQUEST, stun::MsgMethod::REFRESH };
     msg.add_attribute(stun::Attribute::LIFETIME, int_to_bytes(lifetime));
@@ -156,16 +134,28 @@ void Client::refresh(uint32_t lifetime)
     msg.add_attribute(stun::Attribute::REALM, QByteArray());
     msg.add_integrity(_integrity_key);
     msg.add_fingerprint();
-
-    _socket->writeDatagram(msg.to_bytes(), _server_addr.first, _server_addr.second);
-    while (!_socket->hasPendingDatagrams()) { }
-
-    QByteArray response_raw {};
-    response_raw.fill('\x00', BUFFER_SIZE);
-    _socket->readDatagram(response_raw.data(), BUFFER_SIZE);
+    this->send_to_server(msg);
 }
 
-void Client::send_data(QByteArray data, std::string ip_addr, uint16_t port)
+stun::Message Client::send_to_server(const stun::Message msg, bool check_error)
+{
+    QByteArray response_raw {};
+    response_raw.fill('\x00', BUFFER_SIZE);
+    _socket->writeDatagram(msg.to_bytes(), _server_addr.first, _server_addr.second);
+
+    while (!_socket->hasPendingDatagrams()) { }
+    _socket->readDatagram(response_raw.data(), BUFFER_SIZE);
+
+    stun::Message response { response_raw };
+    if (check_error && response.get_class() == stun::MsgClass::ERROR) {
+        // TODO: error message parsion
+        throw ServerError { "TURN server error" };
+    }
+
+    return response;
+}
+
+void Client::send_data(const QByteArray data, const std::string ip_addr, const uint16_t port)
 {
     stun::Message msg { stun::MsgClass::INDICATION, stun::MsgMethod::SEND };
     auto xor_peer_addr = xor_address(ip_addr, port);
@@ -178,10 +168,10 @@ void Client::send_data(QByteArray data, std::string ip_addr, uint16_t port)
 
 QByteArray Client::recv_data()
 {
-    while (!_socket->hasPendingDatagrams()) { }
-
     QByteArray buf {};
     buf.resize(BUFFER_SIZE);
+
+    while (!_socket->hasPendingDatagrams()) { }
     _socket->readDatagram(buf.data(), BUFFER_SIZE);
 
     stun::Message response { buf };
@@ -196,4 +186,9 @@ QByteArray Client::recv_data()
     std::copy(data_attr.begin() + 4, data_attr.end(), data.begin());
 
     return data;
+}
+
+ServerError::ServerError(const std::string& msg)
+    : std::runtime_error { msg }
+{
 }
