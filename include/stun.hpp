@@ -73,11 +73,13 @@ public:
     size_t get_length() const noexcept;
     void add_attribute(Attribute, QByteArray);
     QByteArray find_attribute(Attribute);
+    static QByteArray get_attribute_data(QByteArray);
     QByteArray to_bytes() const noexcept;
     void add_integrity(QByteArray integrity_key);
     void add_fingerprint();
 
 private:
+    static size_t get_attribute_size(QByteArray);
     void push_attribute(Attribute, QByteArray);
     void set_length(size_t length) noexcept;
 

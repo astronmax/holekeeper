@@ -4,7 +4,6 @@
 #include <QtCore/QMessageAuthenticationCode>
 
 #include <random>
-#include <type_traits>
 
 using namespace stun;
 
@@ -81,19 +80,16 @@ Message::Message(QByteArray data)
     msg_len_raw.resize(2);
     std::copy(data.begin() + 2, data.begin() + 4, msg_len_raw.begin());
     _length = bytes_to_int<uint16_t>(msg_len_raw);
+    if (_length % 4 != 0) {
+        throw std::invalid_argument { "Bad STUN message value" };
+    }
 
     size_t offset = HEADER_LENGTH, pos {};
     while (pos < _length) {
-        // attribute len
         QByteArray attr_len_raw {};
-        attr_len_raw.push_back(data[offset + 2]);
-        attr_len_raw.push_back(data[offset + 3]);
-        size_t attr_len = bytes_to_int<uint16_t>(attr_len_raw) + 4;
-
-        // check padding
-        if (attr_len % 4 != 0) {
-            attr_len += 4 - (attr_len % 4);
-        }
+        attr_len_raw.resize(4);
+        std::copy(data.begin() + offset, data.begin() + offset + 4, attr_len_raw.begin());
+        auto attr_len = Message::get_attribute_size(attr_len_raw);
 
         // copy attribute
         QByteArray attr {};
@@ -138,6 +134,16 @@ QByteArray Message::find_attribute(Attribute needed_attr_type)
     }
 }
 
+QByteArray Message::get_attribute_data(QByteArray attribute)
+{
+    auto attr_length = Message::get_attribute_size(attribute);
+    QByteArray data {};
+    data.resize(attr_length);
+    std::copy(attribute.begin() + 4, attribute.end(), data.begin());
+
+    return data;
+}
+
 QByteArray Message::to_bytes() const noexcept
 {
     QByteArray bytes {};
@@ -160,6 +166,26 @@ void Message::add_fingerprint()
     this->set_length(_length + FINGERPRINT_LENGTH);
     auto fingerprint = int_to_bytes<uint32_t>(calc_crc32(this->to_bytes()) ^ FINGERPRINT_XOR);
     this->push_attribute(Attribute::FINGERPRINT, fingerprint);
+}
+
+size_t Message::get_attribute_size(QByteArray attribute)
+{
+    if (attribute.length() < 4) {
+        throw std::invalid_argument { "Bad attribute value" };
+    }
+
+    // attribute len
+    QByteArray attr_len_raw {};
+    attr_len_raw.push_back(attribute[2]);
+    attr_len_raw.push_back(attribute[3]);
+    size_t attr_len = bytes_to_int<uint16_t>(attr_len_raw) + 4;
+
+    // check padding
+    if (attr_len % 4 != 0) {
+        attr_len += 4 - (attr_len % 4);
+    }
+
+    return attr_len;
 }
 
 void Message::push_attribute(Attribute attr_type, QByteArray data)
