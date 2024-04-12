@@ -9,7 +9,7 @@
 
 using namespace turn;
 
-std::pair<std::string, uint16_t> unpack_xor_address(QByteArray data)
+HostAddress unpack_xor_address(QByteArray data)
 {
     QByteArray family_raw {};
     family_raw.resize(2);
@@ -76,7 +76,9 @@ Client::~Client()
     _socket->close();
 }
 
-std::pair<std::string, uint16_t> Client::allocate_address()
+#include <iostream>
+
+HostAddress Client::allocate_address()
 {
     // create request to get NONCE
     stun::Message get_nonce_msg { stun::MsgClass::REQUEST, stun::MsgMethod::ALLOCATE };
@@ -89,8 +91,7 @@ std::pair<std::string, uint16_t> Client::allocate_address()
 
     // get NONCE from response
     auto nonce_attribute = nonce_response.find_attribute(stun::Attribute::NONCE);
-    _nonce.resize(16);
-    std::copy(nonce_attribute.begin() + 4, nonce_attribute.end(), _nonce.begin());
+    _nonce = stun::Message::get_attribute_data(nonce_attribute);
 
     // create allocation request
     stun::Message allocate_msg { stun::MsgClass::REQUEST, stun::MsgMethod::ALLOCATE };
@@ -106,10 +107,7 @@ std::pair<std::string, uint16_t> Client::allocate_address()
 
     // get XOR_RELAYED_ADDRESS from response
     auto relayed_addr_attr = allocate_response.find_attribute(stun::Attribute::XOR_RELAYED_ADDRESS);
-    QByteArray xor_relayed_address {};
-    xor_relayed_address.resize(8);
-    std::copy(relayed_addr_attr.begin() + 4, relayed_addr_attr.end(), xor_relayed_address.begin());
-
+    auto xor_relayed_address = stun::Message::get_attribute_data(relayed_addr_attr);
     auto relayed_addr = unpack_xor_address(xor_relayed_address);
     qInfo("[INFO] Get TURN allocation: %s:%d", relayed_addr.first.c_str(), relayed_addr.second);
     return relayed_addr;
@@ -174,7 +172,7 @@ void Client::send_data(QByteArray data, std::string ip_addr, uint16_t port)
     _socket->writeDatagram(msg.to_bytes(), QHostAddress(_server_addr.first.c_str()), _server_addr.second);
 }
 
-auto Client::recv_data() -> std::pair<QByteArray, std::pair<std::string, uint16_t>>
+auto Client::recv_data() -> std::pair<QByteArray, HostAddress>
 {
     QByteArray buf {};
     buf.resize(BUFFER_SIZE);
@@ -184,20 +182,11 @@ auto Client::recv_data() -> std::pair<QByteArray, std::pair<std::string, uint16_
 
     stun::Message response { buf };
     auto from_addr_attr = response.find_attribute(stun::Attribute::XOR_PEER_ADDRESS);
-    QByteArray from_addr_xor {};
-    from_addr_xor.resize(8);
-    std::copy(from_addr_attr.begin() + 4, from_addr_attr.end(), from_addr_xor.begin());
+    auto from_addr_xor = stun::Message::get_attribute_data(from_addr_attr);
     auto from_addr = unpack_xor_address(from_addr_xor);
 
     auto data_attr = response.find_attribute(stun::Attribute::DATA);
-    QByteArray data_length_raw {};
-    data_length_raw.resize(2);
-    std::copy(data_attr.begin() + 2, data_attr.begin() + 4, data_length_raw.begin());
-    auto data_len = bytes_to_int<uint16_t>(data_length_raw);
-
-    QByteArray data {};
-    data.resize(data_len);
-    std::copy(data_attr.begin() + 4, data_attr.end(), data.begin());
+    auto data = stun::Message::get_attribute_data(data_attr);
 
     return std::make_pair(data, from_addr);
 }

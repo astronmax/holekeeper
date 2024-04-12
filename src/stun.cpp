@@ -89,7 +89,7 @@ Message::Message(QByteArray data)
         QByteArray attr_len_raw {};
         attr_len_raw.resize(4);
         std::copy(data.begin() + offset, data.begin() + offset + 4, attr_len_raw.begin());
-        auto attr_len = Message::get_attribute_size(attr_len_raw);
+        auto attr_len = Message::get_attribute_size(attr_len_raw) + 4;
 
         // copy attribute
         QByteArray attr {};
@@ -178,7 +178,7 @@ size_t Message::get_attribute_size(QByteArray attribute)
     QByteArray attr_len_raw {};
     attr_len_raw.push_back(attribute[2]);
     attr_len_raw.push_back(attribute[3]);
-    size_t attr_len = bytes_to_int<uint16_t>(attr_len_raw) + 4;
+    size_t attr_len = bytes_to_int<uint16_t>(attr_len_raw);
 
     // check padding
     if (attr_len % 4 != 0) {
