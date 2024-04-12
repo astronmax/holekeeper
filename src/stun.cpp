@@ -2,8 +2,10 @@
 #include <stun.hpp>
 
 #include <QtCore/QMessageAuthenticationCode>
+#include <QtCore/QtLogging>
 
 #include <random>
+#include <sstream>
 
 using namespace stun;
 
@@ -40,7 +42,7 @@ QByteArray create_transacrion_id()
     return transaction_id;
 }
 
-HostAddress stun::unpack_xor_address(QByteArray data)
+HostAddress stun::unpack_address(QByteArray data, bool is_xored)
 {
     QByteArray family_raw {};
     family_raw.resize(2);
@@ -53,7 +55,12 @@ HostAddress stun::unpack_xor_address(QByteArray data)
     QByteArray xport_raw {};
     xport_raw.resize(2);
     std::copy(data.begin() + 2, data.begin() + 4, xport_raw.begin());
-    auto port = bytes_to_int<uint16_t>(xport_raw) ^ static_cast<uint16_t>(stun::COOKIE >> 16);
+    uint16_t port {};
+    if (is_xored) {
+        port = bytes_to_int<uint16_t>(xport_raw) ^ static_cast<uint16_t>(stun::COOKIE >> 16);
+    } else {
+        port = bytes_to_int<uint16_t>(xport_raw);
+    }
 
     // unpack ip
     QByteArray xaddr_raw {};
@@ -62,7 +69,12 @@ HostAddress stun::unpack_xor_address(QByteArray data)
     auto cookie_raw = int_to_bytes<uint32_t>(stun::COOKIE);
     std::string ip_addr;
     for (size_t i {}; i < 4; i++) {
-        auto octet = static_cast<uint8_t>(xaddr_raw[i]) ^ static_cast<uint8_t>(cookie_raw[i]);
+        uint8_t octet {};
+        if (is_xored) {
+            octet = static_cast<uint8_t>(xaddr_raw[i]) ^ static_cast<uint8_t>(cookie_raw[i]);
+        } else {
+            octet = static_cast<uint8_t>(xaddr_raw[i]);
+        }
         ip_addr += std::to_string(octet);
         if (i != 3) {
             ip_addr += ".";
@@ -70,6 +82,24 @@ HostAddress stun::unpack_xor_address(QByteArray data)
     }
 
     return std::make_pair(ip_addr, port);
+}
+
+QByteArray stun::xor_address(std::string ip_addr, uint16_t port)
+{
+    QByteArray xor_peer_addr {};
+    xor_peer_addr.push_back(int_to_bytes<uint16_t>(stun::IPV4_PROTOCOL));
+    xor_peer_addr.push_back(int_to_bytes<uint16_t>(port ^ (stun::COOKIE >> 16)));
+
+    auto cookie_raw = int_to_bytes<uint32_t>(stun::COOKIE);
+    std::stringstream ss { ip_addr };
+    std::string octet;
+    size_t i {};
+    while (std::getline(ss, octet, '.')) {
+        xor_peer_addr.push_back(std::atoi(octet.c_str()) ^ cookie_raw[i]);
+        i++;
+    }
+
+    return xor_peer_addr;
 }
 
 Message::Message(MsgClass msg_class, MsgMethod msg_method)
@@ -90,7 +120,7 @@ Message::Message(MsgClass msg_class, MsgMethod msg_method)
 Message::Message(QByteArray data)
 {
     if (static_cast<size_t>(data.length()) < HEADER_LENGTH) {
-        throw std::invalid_argument { "Invalid message" };
+        throw std::invalid_argument { "Invalid STUN message" };
     }
 
     // add header
@@ -203,7 +233,7 @@ void Message::add_fingerprint()
 size_t Message::get_attribute_size(QByteArray attribute)
 {
     if (attribute.length() < 4) {
-        throw std::invalid_argument { "Bad attribute value" };
+        throw std::invalid_argument { "Bad STUN attribute value" };
     }
 
     // attribute len
@@ -252,10 +282,31 @@ HostAddress Client::get_addr_from_server(std::shared_ptr<QUdpSocket> socket, siz
     response_raw.resize(BUFFER_SIZE);
     socket->readDatagram(response_raw.data(), BUFFER_SIZE);
     Message response { response_raw };
-    auto xor_addr_attr = response.find_attribute(stun::Attribute::XOR_MAPPED_ADDRESS);
-    return unpack_xor_address(stun::Message::get_attribute_data(xor_addr_attr));
+
+    if (auto addr_attr = response.find_attribute(stun::Attribute::MAPPED_ADDRESS); !addr_attr.isEmpty()) {
+        return unpack_address(stun::Message::get_attribute_data(addr_attr));
+    } else if (auto xor_addr_attr = response.find_attribute(stun::Attribute::XOR_MAPPED_ADDRESS); !xor_addr_attr.isEmpty()) {
+        return unpack_address(stun::Message::get_attribute_data(xor_addr_attr), true);
+    } else {
+        throw std::runtime_error { "Can't find mapped address attribute in response" };
+    }
 }
 
-NatType Client::get_nat_type()
+NatType Client::get_nat_type(std::shared_ptr<QUdpSocket> socket)
 {
+    if (_servers_list.size() < 2) {
+        throw std::logic_error { "STUN client should have more than 1 server to get NAT type" };
+    }
+
+    auto [ip, port] = this->get_addr_from_server(socket);
+    for (size_t i = 1; i < _servers_list.size(); i++) {
+        auto [another_ip, another_port] = this->get_addr_from_server(socket, i);
+        if (ip != another_ip || port != another_port) {
+            qInfo("[INFO] NAT type is symmetrict");
+            return NatType::SYMMETRIC;
+        }
+    }
+
+    qInfo("[INFO] NAT type is common");
+    return NatType::COMMON;
 }

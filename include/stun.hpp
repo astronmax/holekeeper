@@ -63,7 +63,8 @@ enum class Attribute {
     OTHER_ADDRESS = 0x802C,
 };
 
-HostAddress unpack_xor_address(QByteArray);
+HostAddress unpack_address(QByteArray, bool is_xored = false);
+QByteArray xor_address(std::string, uint16_t);
 
 struct Message final {
 public:
@@ -104,7 +105,7 @@ public:
 public:
     void add_server(HostAddress);
     HostAddress get_addr_from_server(std::shared_ptr<QUdpSocket>, size_t server_index = 0);
-    NatType get_nat_type();
+    NatType get_nat_type(std::shared_ptr<QUdpSocket>);
 
 private:
     constexpr static size_t BUFFER_SIZE = 2048;

@@ -5,27 +5,7 @@
 #include <QtCore/QtLogging>
 #include <QtNetwork/QHostAddress>
 
-#include <sstream>
-
 using namespace turn;
-
-QByteArray xor_address(std::string ip_addr, uint16_t port)
-{
-    QByteArray xor_peer_addr {};
-    xor_peer_addr.push_back(int_to_bytes<uint16_t>(stun::IPV4_PROTOCOL));
-    xor_peer_addr.push_back(int_to_bytes<uint16_t>(port ^ (stun::COOKIE >> 16)));
-
-    auto cookie_raw = int_to_bytes<uint32_t>(stun::COOKIE);
-    std::stringstream ss { ip_addr };
-    std::string octet;
-    size_t i {};
-    while (std::getline(ss, octet, '.')) {
-        xor_peer_addr.push_back(std::atoi(octet.c_str()) ^ cookie_raw[i]);
-        i++;
-    }
-
-    return xor_peer_addr;
-}
 
 Client::Client(std::string ip, uint16_t port, std::string username, std::string password)
 {
@@ -74,14 +54,14 @@ HostAddress Client::allocate_address()
     // get XOR_RELAYED_ADDRESS from response
     auto relayed_addr_attr = allocate_response.find_attribute(stun::Attribute::XOR_RELAYED_ADDRESS);
     auto xor_relayed_address = stun::Message::get_attribute_data(relayed_addr_attr);
-    auto relayed_addr = stun::unpack_xor_address(xor_relayed_address);
+    auto relayed_addr = stun::unpack_address(xor_relayed_address, true);
     qInfo("[INFO] Get TURN allocation: %s:%d", relayed_addr.first.c_str(), relayed_addr.second);
     return relayed_addr;
 }
 
 void Client::create_permission(std::string ip_addr, uint16_t port)
 {
-    auto xor_peer_addr = xor_address(ip_addr, port);
+    auto xor_peer_addr = stun::xor_address(ip_addr, port);
     stun::Message msg { stun::MsgClass::REQUEST, stun::MsgMethod::CREATE_PERMISSION };
     msg.add_attribute(stun::Attribute::XOR_PEER_ADDRESS, xor_peer_addr);
     msg.add_attribute(stun::Attribute::USERNAME, QByteArray(_username.c_str()));
@@ -133,7 +113,7 @@ void Client::send_data(QByteArray data, std::string ip_addr, uint16_t port)
 
     stun::Message msg { stun::MsgClass::INDICATION, stun::MsgMethod::SEND };
     msg.add_attribute(stun::Attribute::DATA, data);
-    msg.add_attribute(stun::Attribute::XOR_PEER_ADDRESS, xor_address(ip_addr, port));
+    msg.add_attribute(stun::Attribute::XOR_PEER_ADDRESS, stun::xor_address(ip_addr, port));
     msg.add_fingerprint();
     _socket->writeDatagram(msg.to_bytes(), QHostAddress(_server_addr.first.c_str()), _server_addr.second);
 }
@@ -149,7 +129,7 @@ auto Client::recv_data() -> std::pair<QByteArray, HostAddress>
     stun::Message response { buf };
     auto from_addr_attr = response.find_attribute(stun::Attribute::XOR_PEER_ADDRESS);
     auto from_addr_xor = stun::Message::get_attribute_data(from_addr_attr);
-    auto from_addr = stun::unpack_xor_address(from_addr_xor);
+    auto from_addr = stun::unpack_address(from_addr_xor, true);
 
     auto data_attr = response.find_attribute(stun::Attribute::DATA);
     auto data = stun::Message::get_attribute_data(data_attr);
