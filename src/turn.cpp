@@ -76,8 +76,6 @@ Client::~Client()
     _socket->close();
 }
 
-#include <iostream>
-
 HostAddress Client::allocate_address()
 {
     // create request to get NONCE
