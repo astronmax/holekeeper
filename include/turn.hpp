@@ -1,5 +1,6 @@
 #pragma once
 
+#include <common.hpp>
 #include <stun.hpp>
 
 #include <QtNetwork/QUdpSocket>
@@ -9,11 +10,9 @@
 
 namespace turn {
 
-using HostAddress = std::pair<std::string, uint16_t>;
-
 struct Client {
 public:
-    Client(std::string, uint16_t, std::string, std::string);
+    explicit Client(std::string, uint16_t, std::string, std::string);
     ~Client();
 
 public:

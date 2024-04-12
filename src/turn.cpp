@@ -9,38 +9,6 @@
 
 using namespace turn;
 
-HostAddress unpack_xor_address(QByteArray data)
-{
-    QByteArray family_raw {};
-    family_raw.resize(2);
-    std::copy(data.begin(), data.begin() + 2, family_raw.begin());
-    if (bytes_to_int<uint16_t>(family_raw) != stun::IPV4_PROTOCOL) {
-        throw std::invalid_argument { "IPv6 address not supported" };
-    }
-
-    // unpack port
-    QByteArray xport_raw {};
-    xport_raw.resize(2);
-    std::copy(data.begin() + 2, data.begin() + 4, xport_raw.begin());
-    auto port = bytes_to_int<uint16_t>(xport_raw) ^ static_cast<uint16_t>(stun::COOKIE >> 16);
-
-    // unpack ip
-    QByteArray xaddr_raw {};
-    xaddr_raw.resize(4);
-    std::copy(data.begin() + 4, data.end(), xaddr_raw.begin());
-    auto cookie_raw = int_to_bytes<uint32_t>(stun::COOKIE);
-    std::string ip_addr;
-    for (size_t i {}; i < 4; i++) {
-        auto octet = static_cast<uint8_t>(xaddr_raw[i]) ^ static_cast<uint8_t>(cookie_raw[i]);
-        ip_addr += std::to_string(octet);
-        if (i != 3) {
-            ip_addr += ".";
-        }
-    }
-
-    return std::make_pair(ip_addr, port);
-}
-
 QByteArray xor_address(std::string ip_addr, uint16_t port)
 {
     QByteArray xor_peer_addr {};
@@ -106,7 +74,7 @@ HostAddress Client::allocate_address()
     // get XOR_RELAYED_ADDRESS from response
     auto relayed_addr_attr = allocate_response.find_attribute(stun::Attribute::XOR_RELAYED_ADDRESS);
     auto xor_relayed_address = stun::Message::get_attribute_data(relayed_addr_attr);
-    auto relayed_addr = unpack_xor_address(xor_relayed_address);
+    auto relayed_addr = stun::unpack_xor_address(xor_relayed_address);
     qInfo("[INFO] Get TURN allocation: %s:%d", relayed_addr.first.c_str(), relayed_addr.second);
     return relayed_addr;
 }
@@ -181,7 +149,7 @@ auto Client::recv_data() -> std::pair<QByteArray, HostAddress>
     stun::Message response { buf };
     auto from_addr_attr = response.find_attribute(stun::Attribute::XOR_PEER_ADDRESS);
     auto from_addr_xor = stun::Message::get_attribute_data(from_addr_attr);
-    auto from_addr = unpack_xor_address(from_addr_xor);
+    auto from_addr = stun::unpack_xor_address(from_addr_xor);
 
     auto data_attr = response.find_attribute(stun::Attribute::DATA);
     auto data = stun::Message::get_attribute_data(data_attr);

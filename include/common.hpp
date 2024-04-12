@@ -4,6 +4,13 @@
 
 #include <type_traits>
 
+using HostAddress = std::pair<std::string, uint16_t>;
+
+enum class NatType {
+    COMMON,
+    SYMMETRIC,
+};
+
 template <typename T>
 QByteArray int_to_bytes(const T integer)
 {

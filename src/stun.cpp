@@ -40,6 +40,38 @@ QByteArray create_transacrion_id()
     return transaction_id;
 }
 
+HostAddress stun::unpack_xor_address(QByteArray data)
+{
+    QByteArray family_raw {};
+    family_raw.resize(2);
+    std::copy(data.begin(), data.begin() + 2, family_raw.begin());
+    if (bytes_to_int<uint16_t>(family_raw) != stun::IPV4_PROTOCOL) {
+        throw std::invalid_argument { "IPv6 address not supported" };
+    }
+
+    // unpack port
+    QByteArray xport_raw {};
+    xport_raw.resize(2);
+    std::copy(data.begin() + 2, data.begin() + 4, xport_raw.begin());
+    auto port = bytes_to_int<uint16_t>(xport_raw) ^ static_cast<uint16_t>(stun::COOKIE >> 16);
+
+    // unpack ip
+    QByteArray xaddr_raw {};
+    xaddr_raw.resize(4);
+    std::copy(data.begin() + 4, data.end(), xaddr_raw.begin());
+    auto cookie_raw = int_to_bytes<uint32_t>(stun::COOKIE);
+    std::string ip_addr;
+    for (size_t i {}; i < 4; i++) {
+        auto octet = static_cast<uint8_t>(xaddr_raw[i]) ^ static_cast<uint8_t>(cookie_raw[i]);
+        ip_addr += std::to_string(octet);
+        if (i != 3) {
+            ip_addr += ".";
+        }
+    }
+
+    return std::make_pair(ip_addr, port);
+}
+
 Message::Message(MsgClass msg_class, MsgMethod msg_method)
 {
     _class = msg_class;
@@ -201,4 +233,29 @@ void Message::set_length(size_t length) noexcept
     auto length_bytes = int_to_bytes<uint16_t>(_length);
     _attributes.at(0)[2] = length_bytes[0];
     _attributes.at(0)[3] = length_bytes[1];
+}
+
+Client::Client(HostAddress server_addr) { _servers_list.push_back(server_addr); }
+
+Client::Client(std::initializer_list<HostAddress> servers_list) { _servers_list = servers_list; }
+
+void Client::add_server(HostAddress server) { _servers_list.push_back(server); }
+
+HostAddress Client::get_addr_from_server(std::shared_ptr<QUdpSocket> socket, size_t server_index)
+{
+    Message msg { MsgClass::REQUEST, MsgMethod::BINDING };
+    auto [ip, port] = _servers_list.at(server_index);
+    socket->writeDatagram(msg.to_bytes(), QHostAddress(ip.c_str()), port);
+
+    while (!socket->hasPendingDatagrams()) { }
+    QByteArray response_raw {};
+    response_raw.resize(BUFFER_SIZE);
+    socket->readDatagram(response_raw.data(), BUFFER_SIZE);
+    Message response { response_raw };
+    auto xor_addr_attr = response.find_attribute(stun::Attribute::XOR_MAPPED_ADDRESS);
+    return unpack_xor_address(stun::Message::get_attribute_data(xor_addr_attr));
+}
+
+NatType Client::get_nat_type()
+{
 }

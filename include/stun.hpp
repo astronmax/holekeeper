@@ -1,6 +1,9 @@
 #pragma once
 
+#include <common.hpp>
+
 #include <QtCore/QByteArray>
+#include <QtNetwork/QUdpSocket>
 
 #include <cstddef>
 #include <cstdint>
@@ -60,10 +63,12 @@ enum class Attribute {
     OTHER_ADDRESS = 0x802C,
 };
 
+HostAddress unpack_xor_address(QByteArray);
+
 struct Message final {
 public:
-    Message(MsgClass, MsgMethod);
-    Message(QByteArray);
+    explicit Message(MsgClass, MsgMethod);
+    explicit Message(QByteArray);
     ~Message() = default;
 
 public:
@@ -88,6 +93,22 @@ private:
     MsgMethod _method;
     size_t _length;
     std::vector<QByteArray> _attributes;
+};
+
+struct Client final {
+public:
+    explicit Client(HostAddress);
+    explicit Client(std::initializer_list<HostAddress>);
+    ~Client() = default;
+
+public:
+    void add_server(HostAddress);
+    HostAddress get_addr_from_server(std::shared_ptr<QUdpSocket>, size_t server_index = 0);
+    NatType get_nat_type();
+
+private:
+    constexpr static size_t BUFFER_SIZE = 2048;
+    std::vector<HostAddress> _servers_list;
 };
 
 };
