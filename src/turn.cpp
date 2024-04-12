@@ -163,16 +163,18 @@ stun::Message Client::send_to_server(stun::Message msg, bool check_error)
 
 void Client::send_data(QByteArray data, std::string ip_addr, uint16_t port)
 {
-    stun::Message msg { stun::MsgClass::INDICATION, stun::MsgMethod::SEND };
-    auto xor_peer_addr = xor_address(ip_addr, port);
-    msg.add_attribute(stun::Attribute::DATA, data);
-    msg.add_attribute(stun::Attribute::XOR_PEER_ADDRESS, xor_peer_addr);
-    msg.add_fingerprint();
+    if (data.length() % 4 != 0) {
+        data.append(QByteArray().fill('\x00', 4 - (data.length() % 4)));
+    }
 
+    stun::Message msg { stun::MsgClass::INDICATION, stun::MsgMethod::SEND };
+    msg.add_attribute(stun::Attribute::DATA, data);
+    msg.add_attribute(stun::Attribute::XOR_PEER_ADDRESS, xor_address(ip_addr, port));
+    msg.add_fingerprint();
     _socket->writeDatagram(msg.to_bytes(), QHostAddress(_server_addr.first.c_str()), _server_addr.second);
 }
 
-QByteArray Client::recv_data()
+auto Client::recv_data() -> std::pair<QByteArray, std::pair<std::string, uint16_t>>
 {
     QByteArray buf {};
     buf.resize(BUFFER_SIZE);
@@ -181,6 +183,12 @@ QByteArray Client::recv_data()
     _socket->readDatagram(buf.data(), BUFFER_SIZE);
 
     stun::Message response { buf };
+    auto from_addr_attr = response.find_attribute(stun::Attribute::XOR_PEER_ADDRESS);
+    QByteArray from_addr_xor {};
+    from_addr_xor.resize(8);
+    std::copy(from_addr_attr.begin() + 4, from_addr_attr.end(), from_addr_xor.begin());
+    auto from_addr = unpack_xor_address(from_addr_xor);
+
     auto data_attr = response.find_attribute(stun::Attribute::DATA);
     QByteArray data_length_raw {};
     data_length_raw.resize(2);
@@ -191,7 +199,7 @@ QByteArray Client::recv_data()
     data.resize(data_len);
     std::copy(data_attr.begin() + 4, data_attr.end(), data.begin());
 
-    return data;
+    return std::make_pair(data, from_addr);
 }
 
 ServerError::ServerError(const std::string& msg)

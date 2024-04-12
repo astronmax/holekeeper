@@ -84,18 +84,16 @@ Message::Message(QByteArray data)
 
     size_t offset = HEADER_LENGTH, pos {};
     while (pos < _length) {
-        // check padding
-        if (data[offset] == '\x00' && data[offset + 1] == '\x00') {
-            offset += 2;
-            pos += 2;
-            continue;
-        }
-
         // attribute len
         QByteArray attr_len_raw {};
         attr_len_raw.push_back(data[offset + 2]);
         attr_len_raw.push_back(data[offset + 3]);
         size_t attr_len = bytes_to_int<uint16_t>(attr_len_raw) + 4;
+
+        // check padding
+        if (attr_len % 4 != 0) {
+            attr_len += 4 - (attr_len % 4);
+        }
 
         // copy attribute
         QByteArray attr {};

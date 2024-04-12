@@ -28,6 +28,7 @@ enum class MsgMethod {
     ALLOCATE = 0x3,
     REFRESH = 0x4,
     SEND = 0x6,
+    DATA = 0x7,
     CREATE_PERMISSION = 0x8,
     CHANNEL_BIND = 0x9,
 };

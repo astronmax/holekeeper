@@ -21,7 +21,7 @@ public:
 
     stun::Message send_to_server(stun::Message, bool check_error = true);
     void send_data(QByteArray, std::string, uint16_t);
-    QByteArray recv_data();
+    std::pair<QByteArray, std::pair<std::string, uint16_t>> recv_data();
 
 private:
     constexpr static size_t BUFFER_SIZE = 2048;
