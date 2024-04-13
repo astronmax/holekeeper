@@ -147,9 +147,18 @@ void SignalServer::check_activity()
     spdlog::info("Clients online: {}", _clients.size());
 }
 
-int main()
-{
-    auto signal_server = SignalServer("0.0.0.0", 5000);
+int main(int argc, const char* argv[])
+try {
+    if (argc < 3) {
+        printf("Usage: signal_server <ADDRESS> <PORT>\n");
+        return 0;
+    }
+
+    spdlog::info("Starting the server on {}:{}", argv[1], std::atoi(argv[2]));
+    auto signal_server = SignalServer(argv[1], std::atoi(argv[2]));
     signal_server.start();
     return 0;
+
+} catch (const std::exception& e) {
+    spdlog::critical("ERROR: {}", e.what());
 }
