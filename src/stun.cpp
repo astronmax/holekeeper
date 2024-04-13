@@ -84,8 +84,9 @@ HostAddress stun::unpack_address(QByteArray data, bool is_xored)
     return std::make_pair(ip_addr, port);
 }
 
-QByteArray stun::xor_address(std::string ip_addr, uint16_t port)
+QByteArray stun::xor_address(HostAddress addr)
 {
+    auto [ip_addr, port] = addr;
     QByteArray xor_peer_addr {};
     xor_peer_addr.push_back(int_to_bytes<uint16_t>(stun::IPV4_PROTOCOL));
     xor_peer_addr.push_back(int_to_bytes<uint16_t>(port ^ (stun::COOKIE >> 16)));

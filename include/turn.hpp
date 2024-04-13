@@ -12,16 +12,16 @@ namespace turn {
 
 struct Client {
 public:
-    explicit Client(std::string, uint16_t, std::string, std::string);
+    explicit Client(HostAddress, std::string, std::string);
     ~Client();
 
 public:
     HostAddress allocate_address();
-    void create_permission(std::string, uint16_t);
+    void create_permission(HostAddress);
     void refresh(uint32_t);
 
     stun::Message send_to_server(stun::Message, bool check_error = true);
-    void send_data(QByteArray, std::string, uint16_t);
+    void send_data(QByteArray, HostAddress);
     std::pair<QByteArray, HostAddress> recv_data();
 
 private:

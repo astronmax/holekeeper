@@ -64,7 +64,7 @@ enum class Attribute {
 };
 
 HostAddress unpack_address(QByteArray, bool is_xored = false);
-QByteArray xor_address(std::string, uint16_t);
+QByteArray xor_address(HostAddress);
 
 struct Message final {
 public:

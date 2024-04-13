@@ -7,11 +7,11 @@
 
 using namespace turn;
 
-Client::Client(std::string ip, uint16_t port, std::string username, std::string password)
+Client::Client(HostAddress addr, std::string username, std::string password)
 {
     _username = username;
     _socket = std::make_shared<QUdpSocket>(nullptr);
-    _server_addr = std::make_pair(ip, port);
+    _server_addr = addr;
 
     QCryptographicHash hash { QCryptographicHash::Algorithm::Md5 };
     hash.addData(username + "::" + password); // no realm
@@ -59,9 +59,9 @@ HostAddress Client::allocate_address()
     return relayed_addr;
 }
 
-void Client::create_permission(std::string ip_addr, uint16_t port)
+void Client::create_permission(HostAddress addr)
 {
-    auto xor_peer_addr = stun::xor_address(ip_addr, port);
+    auto xor_peer_addr = stun::xor_address(addr);
     stun::Message msg { stun::MsgClass::REQUEST, stun::MsgMethod::CREATE_PERMISSION };
     msg.add_attribute(stun::Attribute::XOR_PEER_ADDRESS, xor_peer_addr);
     msg.add_attribute(stun::Attribute::USERNAME, QByteArray(_username.c_str()));
@@ -70,7 +70,7 @@ void Client::create_permission(std::string ip_addr, uint16_t port)
     msg.add_integrity(_integrity_key);
     msg.add_fingerprint();
     this->send_to_server(msg);
-    qInfo("[INFO] Create permission on TURN for %s:%d", ip_addr.c_str(), port);
+    qInfo("[INFO] Create permission on TURN for %s:%d", addr.first.c_str(), addr.second);
 }
 
 void Client::refresh(uint32_t lifetime)
@@ -105,7 +105,7 @@ stun::Message Client::send_to_server(stun::Message msg, bool check_error)
     return response;
 }
 
-void Client::send_data(QByteArray data, std::string ip_addr, uint16_t port)
+void Client::send_data(QByteArray data, HostAddress addr)
 {
     if (data.length() % 4 != 0) {
         data.append(QByteArray().fill('\x00', 4 - (data.length() % 4)));
@@ -113,7 +113,7 @@ void Client::send_data(QByteArray data, std::string ip_addr, uint16_t port)
 
     stun::Message msg { stun::MsgClass::INDICATION, stun::MsgMethod::SEND };
     msg.add_attribute(stun::Attribute::DATA, data);
-    msg.add_attribute(stun::Attribute::XOR_PEER_ADDRESS, stun::xor_address(ip_addr, port));
+    msg.add_attribute(stun::Attribute::XOR_PEER_ADDRESS, stun::xor_address(addr));
     msg.add_fingerprint();
     _socket->writeDatagram(msg.to_bytes(), QHostAddress(_server_addr.first.c_str()), _server_addr.second);
 }
