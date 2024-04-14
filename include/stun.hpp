@@ -96,20 +96,7 @@ private:
     std::vector<QByteArray> _attributes;
 };
 
-struct Client final {
-public:
-    explicit Client(HostAddress);
-    explicit Client(std::initializer_list<HostAddress>);
-    ~Client() = default;
-
-public:
-    void add_server(HostAddress);
-    HostAddress get_addr_from_server(std::shared_ptr<QUdpSocket>, size_t server_index = 0);
-    NatType get_nat_type(std::shared_ptr<QUdpSocket>);
-
-private:
-    constexpr static size_t BUFFER_SIZE = 2048;
-    std::vector<HostAddress> _servers_list;
-};
+HostAddress get_address(std::shared_ptr<QUdpSocket>, HostAddress);
+NatType get_nat_type(std::initializer_list<HostAddress>);
 
 };

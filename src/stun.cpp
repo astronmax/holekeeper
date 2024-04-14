@@ -266,22 +266,16 @@ void Message::set_length(size_t length) noexcept
     _attributes.at(0)[3] = length_bytes[1];
 }
 
-Client::Client(HostAddress server_addr) { _servers_list.push_back(server_addr); }
-
-Client::Client(std::initializer_list<HostAddress> servers_list) { _servers_list = servers_list; }
-
-void Client::add_server(HostAddress server) { _servers_list.push_back(server); }
-
-HostAddress Client::get_addr_from_server(std::shared_ptr<QUdpSocket> socket, size_t server_index)
+HostAddress stun::get_address(std::shared_ptr<QUdpSocket> socket, HostAddress stun_server)
 {
     Message msg { MsgClass::REQUEST, MsgMethod::BINDING };
-    auto [ip, port] = _servers_list.at(server_index);
+    auto [ip, port] = stun_server;
     socket->writeDatagram(msg.to_bytes(), QHostAddress(ip.c_str()), port);
 
     while (!socket->hasPendingDatagrams()) { }
     QByteArray response_raw {};
-    response_raw.resize(BUFFER_SIZE);
-    socket->readDatagram(response_raw.data(), BUFFER_SIZE);
+    response_raw.resize(2048);
+    socket->readDatagram(response_raw.data(), 2048);
     Message response { response_raw };
 
     if (auto addr_attr = response.find_attribute(stun::Attribute::MAPPED_ADDRESS); !addr_attr.isEmpty()) {
@@ -293,17 +287,23 @@ HostAddress Client::get_addr_from_server(std::shared_ptr<QUdpSocket> socket, siz
     }
 }
 
-NatType Client::get_nat_type(std::shared_ptr<QUdpSocket> socket)
+NatType stun::get_nat_type(std::initializer_list<HostAddress> stun_servers)
 {
-    if (_servers_list.size() < 2) {
+    if (stun_servers.size() < 2) {
         throw std::logic_error { "STUN client should have more than 1 server to get NAT type" };
     }
 
-    auto [ip, port] = this->get_addr_from_server(socket);
-    for (size_t i = 1; i < _servers_list.size(); i++) {
-        auto [another_ip, another_port] = this->get_addr_from_server(socket, i);
-        if (ip != another_ip || port != another_port) {
-            qInfo("[INFO] NAT type is symmetrict");
+    auto socket = std::make_shared<QUdpSocket>(nullptr);
+    std::string ip {};
+    uint16_t port {};
+    for (auto server : stun_servers) {
+        const auto [another_ip, another_port] = get_address(socket, server);
+
+        if (ip.empty() && port == 0) {
+            ip = another_ip;
+            port = another_port;
+        } else if (ip != another_ip || port != another_port) {
+            qInfo("[INFO] NAT type is symmetric");
             return NatType::SYMMETRIC;
         }
     }
