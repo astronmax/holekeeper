@@ -66,7 +66,7 @@ enum class Attribute {
 HostAddress unpack_address(QByteArray, bool is_xored = false);
 QByteArray xor_address(HostAddress);
 
-struct Message final {
+class Message final {
 public:
     explicit Message(MsgClass, MsgMethod);
     explicit Message(QByteArray);

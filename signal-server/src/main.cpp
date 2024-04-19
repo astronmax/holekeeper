@@ -15,7 +15,7 @@ using BinStruct = std::vector<uint8_t>;
 using ClientData = std::pair<BinStruct, std::chrono::system_clock::time_point>;
 using ClientsList = std::unordered_map<udp::endpoint, ClientData>;
 
-struct SignalServer final {
+class SignalServer final {
 public:
     explicit SignalServer(std::string, uint16_t, size_t n_threads = 4);
     ~SignalServer() = default;

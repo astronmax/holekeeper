@@ -15,8 +15,10 @@ set(PROJECT_LIBRARIES ${PROJECT_LIBRARIES} Qt6::Network)
 # Application
 # -----------------------------------------------------------------------------
 set(PROJECT_INCLUDE_DIRS ${PROJECT_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR}/include)
-file(GLOB_RECURSE PROJECT_SOURCE_FILES ${CMAKE_SOURCE_DIR}/src/*.cpp)
-qt_add_executable(${PROJECT_NAME} ${PROJECT_SOURCE_FILES})
+qt_add_executable(${PROJECT_NAME}
+    src/main.cpp src/peer.cpp src/signal_client.cpp
+    src/stun.cpp src/turn.cpp)
+
 target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
 target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_LIBRARIES})

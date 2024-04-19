@@ -2,12 +2,14 @@
 
 #include <common.hpp>
 
+#include <QtNetwork/QUdpSocket>
+
 struct PeerInfo final {
     std::string nickname;
     HostAddress address;
 };
 
-struct SignalClient final {
+class SignalClient final {
 public:
     explicit SignalClient(HostAddress);
     void add_peer_info(PeerInfo);

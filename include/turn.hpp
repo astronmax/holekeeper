@@ -10,7 +10,7 @@
 
 namespace turn {
 
-struct Client {
+class Client {
 public:
     explicit Client(HostAddress, std::string, std::string);
     ~Client();
@@ -33,7 +33,7 @@ private:
     QByteArray _nonce;
 };
 
-struct ServerError : public std::runtime_error {
+class ServerError : public std::runtime_error {
 public:
     ServerError(const std::string&);
     virtual ~ServerError() noexcept = default;
