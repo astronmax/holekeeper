@@ -1,0 +1,25 @@
+{
+    "nickname": "username",
+    "port": 5000,
+    "turn_using": false,
+    "stun_servers": [
+        {
+            "host": "108.177.14.127",
+            "port": 19302
+        },
+        {
+            "host": "216.93.246.18",
+            "port": 3478
+        }
+    ],
+    "signal_server": {
+        "host": "82.146.38.203",
+        "port": 5000
+    },
+    "turn_server": {
+        "host": "82.146.38.203",
+        "port": 1234,
+        "username": "username",
+        "password": "none"
+    }
+}
