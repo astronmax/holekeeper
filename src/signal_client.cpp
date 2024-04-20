@@ -6,8 +6,9 @@ QByteArray pack_peer_info(PeerInfo p_info)
     QByteArray packed_info {};
     packed_info.append(p_info.nickname);
     packed_info.push_back('\x00');
-
     packed_info.append(stun::xor_address(p_info.address));
+    packed_info.push_back(static_cast<uint8_t>(p_info.nat_type));
+
     return packed_info;
 }
 
@@ -27,7 +28,9 @@ PeerInfo unpack_peer_info(QByteArray packed_info)
         packed_info.begin() + nickname.size() + 8, addr_raw.begin());
 
     auto addr = stun::unpack_address(addr_raw, true);
-    return PeerInfo { nickname, addr };
+    auto nat_type = NatType(static_cast<uint8_t>(packed_info[nickname.size() + 8]));
+
+    return PeerInfo { nickname, addr, nat_type };
 }
 
 SignalClient::SignalClient(HostAddress signal_server)

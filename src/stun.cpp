@@ -66,7 +66,7 @@ HostAddress stun::unpack_address(QByteArray data, bool is_xored)
     QByteArray xaddr_raw {};
     xaddr_raw.resize(4);
     std::copy(data.begin() + 4, data.end(), xaddr_raw.begin());
-    auto cookie_raw = int_to_bytes<uint32_t>(stun::COOKIE);
+    const auto cookie_raw = int_to_bytes<uint32_t>(stun::COOKIE);
     std::string ip_addr;
     for (size_t i {}; i < 4; i++) {
         uint8_t octet {};
@@ -86,7 +86,7 @@ HostAddress stun::unpack_address(QByteArray data, bool is_xored)
 
 QByteArray stun::xor_address(HostAddress addr)
 {
-    auto [ip_addr, port] = addr;
+    const auto [ip_addr, port] = addr;
     QByteArray xor_peer_addr {};
     xor_peer_addr.push_back(int_to_bytes<uint16_t>(stun::IPV4_PROTOCOL));
     xor_peer_addr.push_back(int_to_bytes<uint16_t>(port ^ (stun::COOKIE >> 16)));
@@ -110,7 +110,7 @@ Message::Message(MsgClass msg_class, MsgMethod msg_method)
     _length = 0;
 
     QByteArray header {};
-    auto msg_type = static_cast<uint16_t>(msg_class) + static_cast<uint16_t>(msg_method);
+    const auto msg_type = static_cast<uint16_t>(msg_class) + static_cast<uint16_t>(msg_method);
     header.push_back(int_to_bytes<uint16_t>(msg_type));
     header.push_back('\x00');
     header.push_back('\x00');
@@ -134,7 +134,7 @@ Message::Message(QByteArray data)
     QByteArray msg_type_raw {};
     msg_type_raw.resize(2);
     std::copy(data.begin(), data.begin() + 2, msg_type_raw.begin());
-    auto msg_type = bytes_to_int<uint16_t>(msg_type_raw);
+    const auto msg_type = bytes_to_int<uint16_t>(msg_type_raw);
     _class = MsgClass(msg_type & 0xFFF0);
     _method = MsgMethod(msg_type & 0xF);
 
@@ -152,7 +152,7 @@ Message::Message(QByteArray data)
         QByteArray attr_len_raw {};
         attr_len_raw.resize(4);
         std::copy(data.begin() + offset, data.begin() + offset + 4, attr_len_raw.begin());
-        auto attr_len = Message::get_attribute_size(attr_len_raw) + 4;
+        const auto attr_len = Message::get_attribute_size(attr_len_raw) + 4;
 
         // copy attribute
         QByteArray attr {};
@@ -199,7 +199,7 @@ QByteArray Message::find_attribute(Attribute needed_attr_type)
 
 QByteArray Message::get_attribute_data(QByteArray attribute)
 {
-    auto attr_length = Message::get_attribute_size(attribute);
+    const auto attr_length = Message::get_attribute_size(attribute);
     QByteArray data {};
     data.resize(attr_length);
     std::copy(attribute.begin() + 4, attribute.end(), data.begin());
@@ -227,7 +227,7 @@ void Message::add_integrity(QByteArray integrity_key)
 void Message::add_fingerprint()
 {
     this->set_length(_length + FINGERPRINT_LENGTH);
-    auto fingerprint = int_to_bytes<uint32_t>(calc_crc32(this->to_bytes()) ^ FINGERPRINT_XOR);
+    const auto fingerprint = int_to_bytes<uint32_t>(calc_crc32(this->to_bytes()) ^ FINGERPRINT_XOR);
     this->push_attribute(Attribute::FINGERPRINT, fingerprint);
 }
 
@@ -261,7 +261,7 @@ void Message::push_attribute(Attribute attr_type, QByteArray data)
 void Message::set_length(size_t length) noexcept
 {
     _length = length;
-    auto length_bytes = int_to_bytes<uint16_t>(_length);
+    const auto length_bytes = int_to_bytes<uint16_t>(_length);
     _attributes.at(0)[2] = length_bytes[0];
     _attributes.at(0)[3] = length_bytes[1];
 }
@@ -296,7 +296,7 @@ NatType stun::get_nat_type(std::initializer_list<HostAddress> stun_servers)
     auto socket = std::make_shared<QUdpSocket>(nullptr);
     std::string ip {};
     uint16_t port {};
-    for (auto server : stun_servers) {
+    for (const auto& server : stun_servers) {
         const auto [another_ip, another_port] = get_address(socket, server);
 
         if (ip.empty() && port == 0) {

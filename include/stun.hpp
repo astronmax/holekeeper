@@ -72,7 +72,6 @@ public:
     explicit Message(QByteArray);
     ~Message() = default;
 
-public:
     MsgClass get_class() const noexcept;
     MsgMethod get_method() const noexcept;
     QByteArray get_header() const noexcept;
@@ -89,7 +88,6 @@ private:
     void push_attribute(Attribute, QByteArray);
     void set_length(size_t length) noexcept;
 
-private:
     MsgClass _class;
     MsgMethod _method;
     size_t _length;

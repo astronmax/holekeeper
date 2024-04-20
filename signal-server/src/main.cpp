@@ -26,7 +26,6 @@ private:
     void process_get(udp::endpoint);
     void check_activity();
 
-private:
     constexpr static size_t BUFFER_SIZE = 1024;
     boost::asio::io_context _io_ctx;
     udp::socket _socket;

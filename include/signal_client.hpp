@@ -7,6 +7,7 @@
 struct PeerInfo final {
     std::string nickname;
     HostAddress address;
+    NatType nat_type;
 };
 
 class SignalClient final {
