@@ -2,7 +2,6 @@
 
 #include <common.hpp>
 
-#include <QtCore/QByteArray>
 #include <QtNetwork/QUdpSocket>
 
 #include <cstddef>
@@ -95,6 +94,6 @@ private:
 };
 
 HostAddress get_address(std::shared_ptr<QUdpSocket>, HostAddress);
-NatType get_nat_type(std::initializer_list<HostAddress>);
+NatType get_nat_type(std::vector<HostAddress>);
 
 };

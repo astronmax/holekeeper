@@ -1,14 +1,75 @@
 #pragma once
 
-#include <QtCore/QByteArray>
+#include <QtCore/QtCore>
 
 #include <type_traits>
+#include <vector>
 
 using HostAddress = std::pair<std::string, uint16_t>;
 
 enum class NatType {
     COMMON,
     SYMMETRIC,
+};
+
+struct TurnSettings {
+    HostAddress address;
+    std::string username;
+    std::string password;
+};
+
+class ConfigManager final {
+public:
+    explicit ConfigManager(QString filename)
+    {
+        QFile config_file;
+        config_file.setFileName(filename);
+        config_file.open(QIODevice::ReadOnly | QIODevice::Text);
+        auto json_val = config_file.readAll();
+        _config_object = QJsonDocument::fromJson(json_val).object();
+    }
+
+    std::string get_nickname() { return _config_object.value("nickname").toString().toStdString(); }
+
+    uint16_t get_port() { return _config_object.value("port").toInt(); }
+
+    bool turn_using() { return _config_object.value("turn_using").toBool(); }
+
+    HostAddress get_signal_server()
+    {
+        auto obj = _config_object.value("signal_server").toObject();
+        auto ip = obj.value("host").toString().toStdString();
+        auto port = obj.value("port").toInt();
+        return std::make_pair(ip, port);
+    }
+
+    TurnSettings get_turn_server()
+    {
+        auto obj = _config_object.value("turn_server").toObject();
+        auto ip = obj.value("host").toString().toStdString();
+        auto port = obj.value("port").toInt();
+        auto username = obj.value("username").toString().toStdString();
+        auto password = obj.value("password").toString().toStdString();
+
+        return TurnSettings { { ip, port }, username, password };
+    }
+
+    std::vector<HostAddress> get_stun_servers()
+    {
+        std::vector<HostAddress> stun_servers;
+        auto stun_array = _config_object.value("stun_servers").toArray();
+        for (const auto stun_val : stun_array) {
+            auto obj = stun_val.toObject();
+            auto ip = obj.value("host").toString().toStdString();
+            auto port = obj.value("port").toInt();
+            stun_servers.push_back({ ip, port });
+        }
+
+        return stun_servers;
+    }
+
+private:
+    QJsonObject _config_object;
 };
 
 template <typename T>

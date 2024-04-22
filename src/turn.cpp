@@ -1,8 +1,6 @@
 #include <common.hpp>
 #include <turn.hpp>
 
-#include <QtCore/QCryptographicHash>
-#include <QtCore/QtLogging>
 #include <QtNetwork/QHostAddress>
 
 using namespace turn;

@@ -1,9 +1,6 @@
 #include <common.hpp>
 #include <stun.hpp>
 
-#include <QtCore/QMessageAuthenticationCode>
-#include <QtCore/QtLogging>
-
 #include <random>
 #include <sstream>
 
@@ -287,7 +284,7 @@ HostAddress stun::get_address(std::shared_ptr<QUdpSocket> socket, HostAddress st
     }
 }
 
-NatType stun::get_nat_type(std::initializer_list<HostAddress> stun_servers)
+NatType stun::get_nat_type(std::vector<HostAddress> stun_servers)
 {
     if (stun_servers.size() < 2) {
         throw std::logic_error { "STUN client should have more than 1 server to get NAT type" };
