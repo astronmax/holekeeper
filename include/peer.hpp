@@ -27,6 +27,7 @@ public:
 
 signals:
     void data_received(QByteArray, HostAddress);
+    void holepunch_success(HostAddress);
 
 public slots:
     void read_data();

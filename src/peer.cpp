@@ -59,6 +59,7 @@ void CommonPeer::read_data()
             this->make_holepunch(from_addr);
             _active_peers.insert(from_addr);
             qInfo() << "[INFO] Add new peer:" << from_ip.toString() << from_port;
+            emit holepunch_success(from_addr);
         }
     } else {
         emit data_received(buf, from_addr);
