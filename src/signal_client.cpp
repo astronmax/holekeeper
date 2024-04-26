@@ -1,18 +1,18 @@
 #include <signal_client.hpp>
 #include <stun.hpp>
 
-QByteArray pack_peer_info(std::shared_ptr<PeerInfo> p_info)
+QByteArray pack_peer_info(PeerInfo p_info)
 {
     QByteArray packed_info {};
-    packed_info.append(p_info->nickname);
+    packed_info.append(p_info.nickname);
     packed_info.push_back('\x00');
-    packed_info.append(stun::xor_address(p_info->address));
-    packed_info.push_back(static_cast<uint8_t>(p_info->nat_type));
+    packed_info.append(stun::xor_address(p_info.address));
+    packed_info.push_back(static_cast<uint8_t>(p_info.nat_type));
 
     return packed_info;
 }
 
-PeerInfo unpack_peer_info(QByteArray packed_info)
+PeerInfo unpack_peer_info(QByteArray const& packed_info)
 {
     std::string nickname {};
     for (auto b : packed_info) {
@@ -39,7 +39,7 @@ SignalClient::SignalClient(HostAddress signal_server)
     _signal_server = signal_server;
 }
 
-void SignalClient::add_peer_info(std::shared_ptr<PeerInfo> p_info)
+void SignalClient::add_peer_info(PeerInfo p_info)
 {
     QByteArray request {};
     request.push_back('\x01');
@@ -82,12 +82,12 @@ void SignalClient::find_online_peers()
             QByteArray packed_info {};
             packed_info.resize(length);
             std::copy(buf.begin() + offset, buf.begin() + offset + length, packed_info.begin());
-            _peers_online.push_back(std::make_shared<PeerInfo>(unpack_peer_info(packed_info)));
+            _peers_online.push_back(unpack_peer_info(packed_info));
             offset += length;
         }
     }
 }
 
-std::vector<std::shared_ptr<PeerInfo>>& SignalClient::get_online_peers() { return _peers_online; }
+std::vector<PeerInfo>& SignalClient::get_online_peers() { return _peers_online; }
 
 HostAddress SignalClient::get_server_addr() const { return _signal_server; }

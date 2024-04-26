@@ -18,14 +18,20 @@ struct TurnSettings {
     std::string password;
 };
 
+struct PeerInfo {
+    std::string nickname;
+    HostAddress address;
+    NatType nat_type;
+};
+
 class ConfigManager final {
 public:
-    explicit ConfigManager(QString filename)
+    explicit ConfigManager(QString const& filename)
     {
         QFile config_file;
         config_file.setFileName(filename);
         config_file.open(QIODevice::ReadOnly | QIODevice::Text);
-        auto json_val = config_file.readAll();
+        const auto json_val = config_file.readAll();
         _config_object = QJsonDocument::fromJson(json_val).object();
     }
 
@@ -37,19 +43,19 @@ public:
 
     HostAddress get_signal_server()
     {
-        auto obj = _config_object.value("signal_server").toObject();
-        auto ip = obj.value("host").toString().toStdString();
-        auto port = obj.value("port").toInt();
+        const auto obj = _config_object.value("signal_server").toObject();
+        const auto ip = obj.value("host").toString().toStdString();
+        const auto port = obj.value("port").toInt();
         return std::make_pair(ip, port);
     }
 
     TurnSettings get_turn_server()
     {
-        auto obj = _config_object.value("turn_server").toObject();
-        auto ip = obj.value("host").toString().toStdString();
-        auto port = obj.value("port").toInt();
-        auto username = obj.value("username").toString().toStdString();
-        auto password = obj.value("password").toString().toStdString();
+        const auto obj = _config_object.value("turn_server").toObject();
+        const auto ip = obj.value("host").toString().toStdString();
+        const auto port = obj.value("port").toInt();
+        const auto username = obj.value("username").toString().toStdString();
+        const auto password = obj.value("password").toString().toStdString();
 
         return TurnSettings { { ip, port }, username, password };
     }
@@ -58,7 +64,7 @@ public:
     {
         std::vector<HostAddress> stun_servers;
         auto stun_array = _config_object.value("stun_servers").toArray();
-        for (const auto stun_val : stun_array) {
+        for (const auto& stun_val : stun_array) {
             auto obj = stun_val.toObject();
             auto ip = obj.value("host").toString().toStdString();
             auto port = obj.value("port").toInt();

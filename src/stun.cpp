@@ -6,7 +6,7 @@
 
 using namespace stun;
 
-uint32_t calc_crc32(const QByteArray data)
+uint32_t calc_crc32(QByteArray const& data)
 {
     std::array<uint32_t, 256> crc_table;
     for (int i = 0; i < 256; i++) {
@@ -39,7 +39,7 @@ QByteArray create_transacrion_id()
     return transaction_id;
 }
 
-HostAddress stun::unpack_address(QByteArray data, bool is_xored)
+HostAddress stun::unpack_address(QByteArray const& data, bool is_xored)
 {
     QByteArray family_raw {};
     family_raw.resize(2);
@@ -115,7 +115,7 @@ Message::Message(MsgClass msg_class, MsgMethod msg_method)
     _attributes.push_back(header);
 }
 
-Message::Message(QByteArray data)
+Message::Message(QByteArray const& data)
 {
     if (static_cast<size_t>(data.length()) < HEADER_LENGTH) {
         throw std::invalid_argument { "Invalid STUN message" };
@@ -194,7 +194,7 @@ QByteArray Message::find_attribute(Attribute needed_attr_type)
     }
 }
 
-QByteArray Message::get_attribute_data(QByteArray attribute)
+QByteArray Message::get_attribute_data(QByteArray const& attribute)
 {
     const auto attr_length = Message::get_attribute_size(attribute);
     QByteArray data {};
@@ -211,7 +211,7 @@ QByteArray Message::to_bytes() const noexcept
     return bytes;
 }
 
-void Message::add_integrity(QByteArray integrity_key)
+void Message::add_integrity(QByteArray const& integrity_key)
 {
     this->set_length(_length + INTEGRITY_LENGTH);
     QMessageAuthenticationCode mac { QCryptographicHash::Algorithm::Sha1 };
@@ -228,7 +228,7 @@ void Message::add_fingerprint()
     this->push_attribute(Attribute::FINGERPRINT, fingerprint);
 }
 
-size_t Message::get_attribute_size(QByteArray attribute)
+size_t Message::get_attribute_size(QByteArray const& attribute)
 {
     if (attribute.length() < 4) {
         throw std::invalid_argument { "Bad STUN attribute value" };
@@ -284,7 +284,7 @@ HostAddress stun::get_address(std::shared_ptr<QUdpSocket> socket, HostAddress st
     }
 }
 
-NatType stun::get_nat_type(std::vector<HostAddress> stun_servers)
+NatType stun::get_nat_type(std::vector<HostAddress> const& stun_servers)
 {
     if (stun_servers.size() < 2) {
         throw std::logic_error { "STUN client should have more than 1 server to get NAT type" };

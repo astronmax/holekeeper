@@ -4,14 +4,6 @@
 
 #include <QtNetwork/QUdpSocket>
 
-#include <queue>
-
-struct PeerInfo {
-    std::string nickname;
-    HostAddress address;
-    NatType nat_type;
-};
-
 class CommonPeer final : public QObject {
     Q_OBJECT
 

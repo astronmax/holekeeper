@@ -62,13 +62,13 @@ enum class Attribute {
     OTHER_ADDRESS = 0x802C,
 };
 
-HostAddress unpack_address(QByteArray, bool is_xored = false);
+HostAddress unpack_address(QByteArray const&, bool is_xored = false);
 QByteArray xor_address(HostAddress);
 
 class Message final {
 public:
     explicit Message(MsgClass, MsgMethod);
-    explicit Message(QByteArray);
+    explicit Message(QByteArray const&);
     ~Message() = default;
 
     MsgClass get_class() const noexcept;
@@ -77,13 +77,13 @@ public:
     size_t get_length() const noexcept;
     void add_attribute(Attribute, QByteArray);
     QByteArray find_attribute(Attribute);
-    static QByteArray get_attribute_data(QByteArray);
+    static QByteArray get_attribute_data(QByteArray const&);
     QByteArray to_bytes() const noexcept;
-    void add_integrity(QByteArray integrity_key);
+    void add_integrity(QByteArray const& integrity_key);
     void add_fingerprint();
 
 private:
-    static size_t get_attribute_size(QByteArray);
+    static size_t get_attribute_size(QByteArray const&);
     void push_attribute(Attribute, QByteArray);
     void set_length(size_t length) noexcept;
 
@@ -94,6 +94,6 @@ private:
 };
 
 HostAddress get_address(std::shared_ptr<QUdpSocket>, HostAddress);
-NatType get_nat_type(std::vector<HostAddress>);
+NatType get_nat_type(std::vector<HostAddress> const&);
 
 };
