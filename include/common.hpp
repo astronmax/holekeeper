@@ -24,6 +24,28 @@ struct PeerInfo {
     NatType nat_type;
 };
 
+class Peer : public QObject {
+    Q_OBJECT
+
+public:
+    virtual void send_data(QByteArray const&, HostAddress) { }
+    virtual void register_peer(PeerInfo) { }
+    virtual void ping_active_peers() { }
+
+public:
+    PeerInfo const& get_info() const noexcept { return _peer_info; }
+    QSet<HostAddress>& get_active_peers() noexcept { return _active_peers; }
+    ~Peer() noexcept = default;
+
+signals:
+    void data_received(QByteArray, HostAddress);
+    void peer_registered(HostAddress);
+
+protected:
+    PeerInfo _peer_info;
+    QSet<HostAddress> _active_peers;
+};
+
 class ConfigManager final {
 public:
     explicit ConfigManager(QString const& filename)

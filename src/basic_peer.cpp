@@ -1,36 +1,35 @@
-#include <peer.hpp>
+#include <basic_peer.hpp>
 #include <stun.hpp>
 
 #include <thread>
 
-CommonPeer::CommonPeer(std::shared_ptr<ConfigManager> config_manager)
+BasicPeer::BasicPeer(ConfigManager& config_manager)
 {
     _socket = std::make_shared<QUdpSocket>();
-    _socket->bind(QHostAddress("0.0.0.0"), config_manager->get_port());
+    _socket->bind(QHostAddress("0.0.0.0"), config_manager.get_port());
 
-    _peer_info = std::make_shared<PeerInfo>();
-    _peer_info->nickname = config_manager->get_nickname();
-    auto stun_servers = config_manager->get_stun_servers();
-    _peer_info->address = stun::get_address(_socket, stun_servers.at(0));
-    _peer_info->nat_type = stun::get_nat_type(stun_servers);
+    _peer_info.nickname = config_manager.get_nickname();
+    auto stun_servers = config_manager.get_stun_servers();
+    _peer_info.address = stun::get_address(_socket, stun_servers.at(0));
+    _peer_info.nat_type = stun::get_nat_type(stun_servers);
 
-    connect(_socket.get(), &QUdpSocket::readyRead, this, &CommonPeer::read_data);
+    connect(_socket.get(), &QUdpSocket::readyRead, this, &BasicPeer::read_data);
 }
 
-void CommonPeer::send_data(QByteArray const& buf, HostAddress addr)
+void BasicPeer::send_data(QByteArray const& buf, HostAddress addr)
 {
     const auto [ip, port] = addr;
     _socket->writeDatagram(buf, QHostAddress(ip.c_str()), port);
 }
 
-void CommonPeer::make_holepunch(HostAddress address, bool brute_enable)
+void BasicPeer::make_holepunch(HostAddress address, bool brute_enable)
 {
     if (brute_enable) {
         const auto [ip, port] = address;
         const size_t min_port = (port > 5'000) ? port - 5'000 : 0;
         const size_t max_port = (port < 60'535) ? port + 5'000 : 65'535;
         for (size_t i = min_port; i <= max_port; i++) {
-            if (i != _peer_info->address.second) {
+            if (i != _peer_info.address.second) {
                 HostAddress addr = std::make_pair(ip, i);
                 this->send_data(QByteArray("\x11\x11\x11\x11"), addr);
                 std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -41,9 +40,7 @@ void CommonPeer::make_holepunch(HostAddress address, bool brute_enable)
     }
 }
 
-std::shared_ptr<PeerInfo> CommonPeer::get_info() { return _peer_info; }
-
-void CommonPeer::read_data()
+void BasicPeer::read_data()
 {
     QByteArray buf;
     buf.resize(_socket->pendingDatagramSize());
@@ -59,18 +56,28 @@ void CommonPeer::read_data()
             this->make_holepunch(from_addr);
             _active_peers.insert(from_addr);
             qInfo() << "[INFO] Add new peer:" << from_ip.toString() << from_port;
-            emit holepunch_success(from_addr);
+            emit peer_registered(from_addr);
         }
     } else {
         emit data_received(buf, from_addr);
     }
 }
 
-void CommonPeer::ping_active_peers()
+void BasicPeer::ping_active_peers()
 {
     for (const auto& peer : _active_peers) {
         this->make_holepunch(peer);
     }
 }
 
-QSet<HostAddress>& CommonPeer::get_active_peers() { return _active_peers; }
+void BasicPeer::register_peer(PeerInfo peer)
+{
+    switch (peer.nat_type) {
+    case NatType::COMMON:
+        this->make_holepunch(peer.address);
+        break;
+    case NatType::SYMMETRIC:
+        this->make_holepunch(peer.address, true);
+        break;
+    }
+}
