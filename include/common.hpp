@@ -38,7 +38,7 @@ public:
 
 signals:
     void data_received(QByteArray, HostAddress);
-    void peer_registered(HostAddress);
+    void peer_registered(std::string, HostAddress);
 
 protected:
     PeerInfo _peer_info;

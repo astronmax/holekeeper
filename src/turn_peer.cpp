@@ -53,9 +53,11 @@ void TurnPeer::register_peer(PeerInfo peer)
     msg.add_integrity(_integrity_key);
     msg.add_fingerprint();
     this->send_to_server(msg.to_bytes());
-    qInfo("[INFO] Create permission on TURN for %s:%d", peer.address.first.c_str(), peer.address.second);
+    qInfo("[INFO] Create permission on TURN for %s %s:%d",
+        peer.nickname.c_str(), peer.address.first.c_str(), peer.address.second);
 
-    emit peer_registered(peer.address);
+    _active_peers.insert(peer.address);
+    emit peer_registered(peer.nickname, peer.address);
 }
 
 void TurnPeer::ping_active_peers() { this->refresh(600); }
