@@ -35,7 +35,6 @@ public:
 public:
     PeerInfo const& get_info() const noexcept { return _peer_info; }
     QSet<HostAddress>& get_active_peers() noexcept { return _active_peers; }
-    ~Peer() noexcept = default;
 
 signals:
     void data_received(QByteArray, HostAddress);
