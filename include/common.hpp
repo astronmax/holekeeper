@@ -34,15 +34,15 @@ public:
 
 public:
     PeerInfo const& get_info() const noexcept { return _peer_info; }
-    QSet<HostAddress>& get_active_peers() noexcept { return _active_peers; }
+    QMap<std::string, HostAddress>& get_active_peers() noexcept { return _active_peers; }
 
 signals:
-    void data_received(QByteArray, HostAddress);
-    void peer_registered(std::string, HostAddress);
+    void data_received(QByteArray, std::string);
+    void peer_registered(std::string);
 
 protected:
     PeerInfo _peer_info;
-    QSet<HostAddress> _active_peers;
+    QMap<std::string, HostAddress> _active_peers;
 };
 
 class ConfigManager final {

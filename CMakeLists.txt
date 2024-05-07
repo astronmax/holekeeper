@@ -8,8 +8,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Qt6 Library
 # -----------------------------------------------------------------------------
 set(CMAKE_AUTOMOC ON)
-find_package(Qt6 REQUIRED COMPONENTS Core Network)
-set(PROJECT_LIBRARIES ${PROJECT_LIBRARIES} Qt6::Core Qt6::Network)
+find_package(Qt6 REQUIRED COMPONENTS Core Network Widgets)
+set(PROJECT_LIBRARIES ${PROJECT_LIBRARIES} Qt6::Core Qt6::Network Qt6::Widgets)
 
 # -----------------------------------------------------------------------------
 # Application

@@ -53,9 +53,8 @@ void BasicPeer::read_data()
     if (buf[0] == '\x11' && buf[1] == '\x11'
         && buf[2] == '\x11' && buf[3] == '\x11') {
 
-        if (auto it = _active_peers.find(from_addr); it == _active_peers.end()) {
+        if (auto p = _active_peers.key(from_addr); p.empty()) {
             this->make_holepunch(from_addr);
-            _active_peers.insert(from_addr);
             std::string nickname {};
             for (qsizetype i = 4; i < buf.length(); i++) {
                 if (buf[i] == '\x00') {
@@ -63,11 +62,12 @@ void BasicPeer::read_data()
                 }
                 nickname += buf[i];
             }
+            _active_peers.insert(nickname, from_addr);
             qInfo() << "[INFO] Add new peer:" << nickname << from_ip.toString() << from_port;
-            emit peer_registered(nickname, from_addr);
+            emit peer_registered(nickname);
         }
     } else {
-        emit data_received(buf, from_addr);
+        emit data_received(buf, _active_peers.key(from_addr));
     }
 }
 

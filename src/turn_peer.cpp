@@ -56,8 +56,8 @@ void TurnPeer::register_peer(PeerInfo peer)
     qInfo("[INFO] Create permission on TURN for %s %s:%d",
         peer.nickname.c_str(), peer.address.first.c_str(), peer.address.second);
 
-    _active_peers.insert(peer.address);
-    emit peer_registered(peer.nickname, peer.address);
+    _active_peers.insert(peer.nickname, peer.address);
+    emit peer_registered(peer.nickname);
 }
 
 void TurnPeer::ping_active_peers() { this->refresh(600); }
@@ -85,7 +85,7 @@ void TurnPeer::read_data()
         auto data_attr = response.find_attribute(stun::Attribute::DATA);
         auto data = stun::Message::get_attribute_data(data_attr);
 
-        emit data_received(data, from_addr);
+        emit data_received(data, _active_peers.key(from_addr));
     }
 }
 
