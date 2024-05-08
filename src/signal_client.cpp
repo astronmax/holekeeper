@@ -57,13 +57,12 @@ void SignalClient::find_online_peers()
     _peers_online.clear();
     const auto [ip, port] = _signal_server;
     _socket->writeDatagram(QByteArray("\x02"), QHostAddress(ip.c_str()), port);
+    QByteArray buf {};
 
     while (true) {
-        QByteArray buf {};
-        buf.resize(1024);
-
         while (!_socket->hasPendingDatagrams()) { }
-        _socket->readDatagram(buf.data(), 1024);
+        buf.resize(_socket->pendingDatagramSize());
+        _socket->readDatagram(buf.data(), _socket->pendingDatagramSize());
 
         if (buf[0] == '\xFF' && buf[1] == '\xFF' && buf[2] == '\xFF' && buf[3] == '\xFF') {
             break;
@@ -85,6 +84,8 @@ void SignalClient::find_online_peers()
             _peers_online.push_back(unpack_peer_info(packed_info));
             offset += length;
         }
+
+        buf.clear();
     }
 }
 

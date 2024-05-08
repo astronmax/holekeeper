@@ -3,6 +3,7 @@
 #include <common.hpp>
 #include <signal_client.hpp>
 
+#include <QtCore/QTimer>
 #include <QtWidgets/QListWidget>
 #include <QtWidgets/QTabWidget>
 #include <QtWidgets/QTableWidgetItem>
@@ -24,4 +25,6 @@ private:
     SignalClient _signal_client;
     QListWidget _online_users_tab;
     QListWidget _chats_tab;
+    QTimer _info_send_timer;
+    QTimer _ping_users_timer;
 };
