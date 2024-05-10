@@ -40,6 +40,8 @@ void TurnPeer::send_data(QByteArray const& message, HostAddress addr)
 
     const auto [ip, port] = _server.address;
     _socket->writeDatagram(msg.to_bytes(), QHostAddress(ip.c_str()), port);
+
+    _msg_storage.add_message(_active_peers.key(addr), _active_peers.key(addr), message.toStdString());
 }
 
 void TurnPeer::register_peer(PeerInfo peer)
@@ -85,7 +87,10 @@ void TurnPeer::read_data()
         auto data_attr = response.find_attribute(stun::Attribute::DATA);
         auto data = stun::Message::get_attribute_data(data_attr);
 
-        emit data_received(data, _active_peers.key(from_addr));
+        auto nickname = _active_peers.key(from_addr);
+        _msg_storage.add_message(nickname, this->get_info().nickname, buf.toStdString());
+
+        emit data_received(data, nickname);
     }
 }
 

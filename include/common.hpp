@@ -1,5 +1,7 @@
 #pragma once
 
+#include <msg_storage.hpp>
+
 #include <QtCore/QtCore>
 
 #include <type_traits>
@@ -43,6 +45,7 @@ signals:
 protected:
     PeerInfo _peer_info;
     QMap<std::string, HostAddress> _active_peers;
+    MessageStorage _msg_storage;
 };
 
 class ConfigManager final {

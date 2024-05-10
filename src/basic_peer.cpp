@@ -18,6 +18,7 @@ void BasicPeer::send_data(QByteArray const& buf, HostAddress addr)
 {
     const auto [ip, port] = addr;
     _socket->writeDatagram(buf, QHostAddress(ip.c_str()), port);
+    _msg_storage.add_message(_active_peers.key(addr), _active_peers.key(addr), buf.toStdString());
 }
 
 void BasicPeer::make_holepunch(HostAddress address)
@@ -52,7 +53,9 @@ void BasicPeer::read_data()
             emit peer_registered(nickname);
         }
     } else {
-        emit data_received(buf, _active_peers.key(from_addr));
+        auto nickname = _active_peers.key(from_addr);
+        _msg_storage.add_message(nickname, this->get_info().nickname, buf.toStdString());
+        emit data_received(buf, nickname);
     }
 }
 
