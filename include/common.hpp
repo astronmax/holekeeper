@@ -60,8 +60,6 @@ public:
 
     uint16_t get_port() { return _config_object.value("port").toInt(); }
 
-    bool turn_using() { return _config_object.value("turn_using").toBool(); }
-
     HostAddress get_signal_server()
     {
         const auto obj = _config_object.value("signal_server").toObject();
