@@ -23,6 +23,7 @@ UsersPanel::UsersPanel(ConfigManager& config_manager, std::shared_ptr<Peer> peer
     connect(this, &QTabWidget::tabBarClicked, this, &UsersPanel::refresh_online_users);
     connect(&_online_users_tab, &QListWidget::itemDoubleClicked, this, &UsersPanel::start_registering);
     connect(_peer.get(), &Peer::peer_registered, this, &UsersPanel::add_user);
+    connect(&_chats_tab, &QListWidget::itemClicked, this, &UsersPanel::emit_chat_switched);
 }
 
 void UsersPanel::refresh_online_users(int index)
@@ -60,4 +61,9 @@ void UsersPanel::add_user(std::string nickname)
     }
 
     _chats_tab.addItem(nickname.c_str());
+}
+
+void UsersPanel::emit_chat_switched(QListWidgetItem* clicked_item)
+{
+    emit chat_switched(clicked_item->text());
 }

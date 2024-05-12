@@ -39,11 +39,13 @@ ChatPanel::ChatPanel(std::shared_ptr<Peer> peer, std::string chat_nickname)
     main_layout->setStretch(1, 5);
     main_layout->setStretch(2, 1);
     setLayout(main_layout);
+
+    connect(&_send_button, &QPushButton::clicked, this, &ChatPanel::emit_send_signal);
 }
 
-void ChatPanel::add_message(TextMessage const& msg)
+void ChatPanel::add_message(std::string author, std::string body)
 {
-    auto msg_block = new MessageBlock(msg.author, msg.body);
+    auto msg_block = new MessageBlock(author, body);
 
     auto item = new QListWidgetItem();
     item->setSizeHint(msg_block->sizeHint());
@@ -54,8 +56,15 @@ void ChatPanel::add_message(TextMessage const& msg)
 
 void ChatPanel::load(std::string chat_nickname)
 {
+    _chat_field.clear();
     _chat_nickname.setText(("Chat with: " + chat_nickname).c_str());
     for (const auto& msg : _peer->get_message_storage().get_chat(chat_nickname)) {
-        this->add_message(msg);
+        this->add_message(msg.author, msg.body);
     }
+}
+
+void ChatPanel::emit_send_signal()
+{
+    emit send_button_clicked(_message_to_send.toPlainText());
+    _message_to_send.clear();
 }

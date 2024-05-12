@@ -15,10 +15,14 @@ public:
     explicit UsersPanel(ConfigManager&, std::shared_ptr<Peer>);
     ~UsersPanel() = default;
 
+signals:
+    void chat_switched(QString);
+
 public slots:
     void refresh_online_users(int);
     void start_registering(QListWidgetItem*);
     void add_user(std::string);
+    void emit_chat_switched(QListWidgetItem*);
 
 private:
     std::shared_ptr<Peer> _peer;

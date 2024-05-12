@@ -27,8 +27,14 @@ public:
     explicit ChatPanel(std::shared_ptr<Peer>, std::string);
     ~ChatPanel() = default;
 
-    void add_message(TextMessage const&);
+    void add_message(std::string, std::string);
     void load(std::string);
+
+signals:
+    void send_button_clicked(QString);
+
+public slots:
+    void emit_send_signal();
 
 private:
     std::shared_ptr<Peer> _peer;

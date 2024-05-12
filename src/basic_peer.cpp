@@ -33,12 +33,14 @@ void BasicPeer::make_holepunch(HostAddress address, bool brute_enable)
         for (size_t i = min_port; i <= max_port; i++) {
             if (i != _peer_info.address.second) {
                 HostAddress addr = std::make_pair(ip, i);
-                this->send_data(QByteArray(data.c_str()), addr);
+                const auto [ip, port] = address;
+                _socket->writeDatagram(QByteArray(data.c_str()), QHostAddress(ip.c_str()), port);
                 std::this_thread::sleep_for(std::chrono::milliseconds(1));
             }
         }
     } else {
-        this->send_data(QByteArray(data.c_str()), address);
+        const auto [ip, port] = address;
+        _socket->writeDatagram(QByteArray(data.c_str()), QHostAddress(ip.c_str()), port);
     }
 }
 
