@@ -37,6 +37,7 @@ public:
 public:
     PeerInfo const& get_info() const noexcept { return _peer_info; }
     QMap<std::string, HostAddress>& get_active_peers() noexcept { return _active_peers; }
+    MessageStorage& get_message_storage() noexcept { return _msg_storage; }
 
 signals:
     void data_received(QByteArray, std::string);
