@@ -19,7 +19,7 @@ public slots:
     void read_data();
 
 private:
-    void make_holepunch(HostAddress);
+    void make_holepunch(HostAddress, bool brute_enable = false);
 
 private:
     std::shared_ptr<QUdpSocket> _socket;

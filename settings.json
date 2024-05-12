@@ -1,6 +1,7 @@
 {
     "nickname": "username",
     "port": 5000,
+    "turn_using": false,
     "stun_servers": [
         {
             "host": "108.177.14.127",

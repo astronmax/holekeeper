@@ -1,6 +1,8 @@
 #include <basic_peer.hpp>
 #include <stun.hpp>
 
+#include <thread>
+
 BasicPeer::BasicPeer(ConfigManager& config_manager)
 {
     _socket = std::make_shared<QUdpSocket>();
@@ -21,10 +23,23 @@ void BasicPeer::send_data(QByteArray const& buf, HostAddress addr)
     _msg_storage.add_message(_active_peers.key(addr), _active_peers.key(addr), buf.toStdString());
 }
 
-void BasicPeer::make_holepunch(HostAddress address)
+void BasicPeer::make_holepunch(HostAddress address, bool brute_enable)
 {
     const auto data = "\x11\x11\x11\x11" + _peer_info.nickname;
-    this->send_data(QByteArray(data.c_str()), address);
+    if (brute_enable) {
+        const auto [ip, port] = address;
+        const size_t min_port = (port > 5'000) ? port - 5'000 : 0;
+        const size_t max_port = (port < 60'535) ? port + 5'000 : 65'535;
+        for (size_t i = min_port; i <= max_port; i++) {
+            if (i != _peer_info.address.second) {
+                HostAddress addr = std::make_pair(ip, i);
+                this->send_data(QByteArray(data.c_str()), addr);
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }
+        }
+    } else {
+        this->send_data(QByteArray(data.c_str()), address);
+    }
 }
 
 void BasicPeer::read_data()
@@ -66,4 +81,14 @@ void BasicPeer::ping_active_peers()
     }
 }
 
-void BasicPeer::register_peer(PeerInfo peer) { this->make_holepunch(peer.address); }
+void BasicPeer::register_peer(PeerInfo peer)
+{
+    switch (peer.nat_type) {
+    case NatType::COMMON:
+        this->make_holepunch(peer.address);
+        break;
+    case NatType::SYMMETRIC:
+        this->make_holepunch(peer.address, true);
+        break;
+    }
+}
