@@ -13,7 +13,7 @@ using namespace std::chrono_literals;
 
 using BinStruct = std::vector<uint8_t>;
 using ClientData = std::pair<BinStruct, std::chrono::system_clock::time_point>;
-using ClientsList = std::unordered_map<udp::endpoint, ClientData>;
+using ClientsList = std::unordered_map<std::string, ClientData>;
 
 class SignalServer final {
 public:
@@ -22,7 +22,7 @@ public:
     void start();
 
 private:
-    void process_add(BinStruct, udp::endpoint);
+    void process_add(BinStruct);
     void process_get(udp::endpoint);
     void check_activity();
 
@@ -56,8 +56,8 @@ void SignalServer::start()
         _socket.receive_from(boost::asio::buffer(buf), remote_ep);
         switch (buf.at(0)) {
         case 0x01:
-            boost::asio::post(_thread_pool, [this, buf, remote_ep]() {
-                this->process_add(buf, remote_ep);
+            boost::asio::post(_thread_pool, [this, buf]() {
+                this->process_add(buf);
             });
             break;
 
@@ -73,7 +73,7 @@ void SignalServer::start()
     }
 }
 
-void SignalServer::process_add(BinStruct buf, udp::endpoint remote_ep)
+void SignalServer::process_add(BinStruct buf)
 {
     if (buf.size() < 3) {
         return;
@@ -84,13 +84,21 @@ void SignalServer::process_add(BinStruct buf, udp::endpoint remote_ep)
         BinStruct binary_struct(length);
         std::copy(buf.begin() + 3, buf.begin() + 3 + length, binary_struct.begin());
 
+        std::string nickname {};
+        for (size_t i = 3; i < buf.size(); i++) {
+            if (buf.at(i) == '\x00') {
+                break;
+            }
+            nickname += buf.at(i);
+        }
+
         _clients_mtx.lock();
         auto time_now = std::chrono::high_resolution_clock::now();
-        _clients[remote_ep] = std::make_pair(binary_struct, time_now);
+        _clients[nickname] = std::make_pair(binary_struct, time_now);
         _clients_mtx.unlock();
-    }
 
-    spdlog::info("Add data from {}:{}", remote_ep.address().to_string(), remote_ep.port());
+        spdlog::info("Add data for {}", nickname);
+    }
 }
 
 void SignalServer::process_get(udp::endpoint remote_ep)
@@ -99,7 +107,7 @@ void SignalServer::process_get(udp::endpoint remote_ep)
     BinStruct response {};
     size_t offset {};
     _clients_mtx.lock();
-    for (auto [client_addr, client_data] : _clients) {
+    for (auto [client_nickname, client_data] : _clients) {
         auto frame = client_data.first;
         if ((offset + frame.size() + 2) > BUFFER_SIZE) {
             _socket.send_to(boost::asio::buffer(response, response.size()), remote_ep);
@@ -125,13 +133,13 @@ void SignalServer::process_get(udp::endpoint remote_ep)
 
 void SignalServer::check_activity()
 {
-    std::vector<udp::endpoint> clients_to_remove;
+    std::vector<std::string> clients_to_remove;
     _clients_mtx.lock();
     auto time_now = std::chrono::high_resolution_clock::now();
-    for (auto [client_addr, client_data] : _clients) {
+    for (auto [client_nickname, client_data] : _clients) {
         auto last_request_time = client_data.second;
         if (time_now - last_request_time > 30s) {
-            clients_to_remove.push_back(client_addr);
+            clients_to_remove.push_back(client_nickname);
         }
     }
 
@@ -141,7 +149,7 @@ void SignalServer::check_activity()
     _clients_mtx.unlock();
 
     std::for_each(clients_to_remove.begin(), clients_to_remove.end(), [](auto c) {
-        spdlog::info("Remove client {}:{}", c.address().to_string(), c.port());
+        spdlog::info("Remove client {}", c);
     });
     spdlog::info("Clients online: {}", _clients.size());
 }
