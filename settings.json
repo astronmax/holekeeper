@@ -12,10 +12,6 @@
             "port": 3478
         }
     ],
-    "signal_server": {
-        "host": "82.146.38.203",
-        "port": 5000
-    },
     "turn_server": {
         "host": "82.146.38.203",
         "port": 1234,
