@@ -14,9 +14,21 @@ find_package(Qt6 REQUIRED COMPONENTS Core Network Widgets)
 set(PROJECT_LIBRARIES ${PROJECT_LIBRARIES} Qt6::Core Qt6::Network Qt6::Widgets)
 
 # -----------------------------------------------------------------------------
+# Crypto++ Library
+# -----------------------------------------------------------------------------
+message("Build Crypto++ library with Make...")
+execute_process(
+    COMMAND make -j4
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/third_pary/cryptopp
+    OUTPUT_QUIET
+)
+
+set(PROJECT_LIBRARIES ${PROJECT_LIBRARIES} ${CMAKE_SOURCE_DIR}/third_pary/cryptopp/libcryptopp.a)
+
+# -----------------------------------------------------------------------------
 # Application
 # -----------------------------------------------------------------------------
-set(PROJECT_INCLUDE_DIRS ${PROJECT_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR}/include)
+set(PROJECT_INCLUDE_DIRS ${PROJECT_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/third_pary)
 file(GLOB_RECURSE PROJECT_SOURCES ${CMAKE_SOURCE_DIR}/src/*.cpp)
 file(GLOB_RECURSE PROJECT_INCLUDE_FILES ${CMAKE_SOURCE_DIR}/include/*.hpp)
 
