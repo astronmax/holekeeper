@@ -2,6 +2,7 @@
 
 #include "connect_window.hpp"
 
+#include <QtCore/QTimer>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QListWidget>
 #include <QtWidgets/QPushButton>
@@ -36,6 +37,7 @@ private:
     QListWidget m_chat_field;
     QTextEdit m_message_field;
     QPushButton m_send_button;
+    QTimer m_ping_timer;
 };
 
 };

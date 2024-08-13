@@ -26,6 +26,7 @@ ChatWindow::ChatWindow(std::shared_ptr<hk::AbstractChannel> channel)
     m_connect_window = std::make_shared<ConnectWindow>(m_channel);
     connect(m_channel.get(), &AbstractChannel::peer_connected, this, [this]() {
         m_connect_window->close();
+        m_ping_timer.start(5'000);
         show();
     });
 
@@ -41,6 +42,12 @@ ChatWindow::ChatWindow(std::shared_ptr<hk::AbstractChannel> channel)
         m_channel->send(msg_body);
         m_message_field.clear();
         display_message(new MessageBlock(m_channel->get_peer_info()->nickname, msg_body.toStdString()));
+    });
+
+    // connect ping timer
+    connect(&m_ping_timer, &QTimer::timeout, this, [this]() {
+        m_channel->send_ping();
+        m_ping_timer.start(5'000);
     });
 }
 
